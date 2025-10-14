@@ -1,0 +1,78 @@
+{
+    "profile_evaluation": {
+        "profile_strength_score": 75,
+        "profile_strength_status": "Good",
+        "profile_strength_notes": "The candidate has a solid background in technology with active portfolio work and a current role at Google, demonstrating reliability.",
+        "skill_analysis": {
+            "strengths": [
+                "Strong problem-solving skills",
+                "Active participation in monthly mock interviews",
+                "Experience in product development"
+            ],
+            "areas_to_develop": [
+                "System design experience needs enhancement",
+                "Further upskilling in data science and web development",
+                "Expand portfolio projects to include diverse tech stacks"
+            ]
+        },
+        "recommended_tools": [
+            "Data Science Libraries (e.g., Pandas, NumPy)",
+            "Web Development Frameworks (e.g., React, Django)",
+            "Design System Resources (e.g., Figma, Sketch)"
+        ],
+        "experience_benchmark": {
+            "your_experience_years": "4",
+            "typical_for_target_role_years": "5-7",
+            "gap_analysis": "2-3 years of experience needed in system design"
+        },
+        "interview_readiness": {
+            "technical_interview_percent": 70,
+            "hr_behavioral_percent": 80,
+            "technical_notes": "Well-prepared for technical interviews but needs to bolster system design responses."
+        },
+        "peer_comparison": {
+            "percentile": 85,
+            "label": "Above Average",
+            "summary": "Candidate performs better than 85% of peers in the tech industry, demonstrating strong technical capabilities.",
+            "metrics": {
+                "profile_strength_percent": 80,
+                "better_than_peers_percent": 70
+            }
+        },
+        "success_likelihood": {
+            "score_percent": 78,
+            "label": "Good",
+            "status": "Good",
+            "notes": "With targeted upskilling and additional hands-on experience, candidate is likely to secure a position in desired companies."
+        },
+        "quick_wins": [
+            "Complete multiple system design projects to enhance experience",
+            "Participate in hackathons in data science and web-development",
+            "Seek mentorship from senior engineers at Google"
+        ],
+        "opportunities_you_qualify_for": [
+            "Software Engineer positions at FAANG companies",
+            "Junior Data Scientist roles",
+            "Web Developer internships or junior positions"
+        ],
+        "recommended_roles_based_on_interests": [
+            {
+                "title": "Software Engineer",
+                "seniority": "Mid-Senior",
+                "salary_range_usd": "120000-140000",
+                "reason": "Directly aligned with current skills and active portfolio."
+            },
+            {
+                "title": "Data Scientist",
+                "seniority": "Entry",
+                "salary_range_usd": "100000-120000",
+                "reason": "Leverage interest in data science while needing foundational support."
+            }
+        ],
+        "badges": [
+            "Top Performer in Mock Interviews",
+            "Active Contributor to Open Source Projects"
+        ],
+        "source_images": []
+    }
+}
