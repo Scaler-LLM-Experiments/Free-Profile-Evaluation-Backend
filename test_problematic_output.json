@@ -1,0 +1,97 @@
+{
+  "profile_evaluation": {
+    "profile_strength_score": 85,
+    "profile_strength_status": "Excellent",
+    "profile_strength_notes": "You have a strong technical foundation with significant problem-solving skills and active contributions that enhance your profile.",
+    "skill_analysis": {
+      "strengths": [
+        "Problem solving",
+        "System design",
+        "Extensive coding experience",
+        "Active GitHub portfolio"
+      ],
+      "areas_to_develop": [
+        "Increase mock interview practice",
+        "Broaden system design expertise to diverse domains",
+        "Improve behavioral interview skills"
+      ]
+    },
+    "recommended_tools": [
+      "LeetCode",
+      "GitHub",
+      "System Design tools"
+    ],
+    "experience_benchmark": {
+      "your_experience_years": "5+",
+      "typical_for_target_role_years": "3-5",
+      "gap_analysis": "You have the ideal experience or more for a role in your target area, positioning you well competitively."
+    },
+    "interview_readiness": {
+      "technical_interview_percent": 80,
+      "hr_behavioral_percent": 60,
+      "technical_notes": "Your technical preparation is robust, but consider further preparation for system design interviews at top tech firms."
+    },
+    "peer_comparison": {
+      "percentile": 90,
+      "label": "Top Performer",
+      "summary": "You are ahead of most of your peers, indicating a strong profile in the competitive landscape.",
+      "metrics": {
+        "profile_strength_percent": 85,
+        "better_than_peers_percent": 90
+      }
+    },
+    "success_likelihood": {
+      "score_percent": 85,
+      "label": "High likelihood of success",
+      "status": "Excellent",
+      "notes": "With sustained effort in preparation and leveraging your strengths, success in a FAANG-level role is highly achievable."
+    },
+    "quick_wins": [
+      {
+        "title": "Enhance Behavioral Skills",
+        "description": "Participate in regular behavioral interview sessions and refine your storytelling techniques to better communicate your accomplishments and experiences in interviews.",
+        "icon": "target"
+      },
+      {
+        "title": "Design Diverse Systems",
+        "description": "Engage in designing systems for varied scenarios beyond your current experience to broaden your perspective and capability in system architecture.",
+        "icon": "pencil-ruler"
+      },
+      {
+        "title": "Increase Interview Practice",
+        "description": "Boost the frequency of mock interviews to enhance your confidence and performance under real interview conditions.",
+        "icon": "rocket"
+      }
+    ],
+    "opportunities_you_qualify_for": [
+      "Senior Software Engineer at major tech companies",
+      "Staff Engineer at innovative tech startups",
+      "Tech Lead roles focusing on product development"
+    ],
+    "recommended_roles_based_on_interests": [
+      {
+        "title": "Senior Software Engineer",
+        "seniority": "Senior",
+        "salary_range_usd": "180,000-220,000",
+        "reason": "With significant coding and system design experience, you are well-suited to make an impact in senior engineering roles at top tech firms."
+      },
+      {
+        "title": "Tech Lead",
+        "seniority": "Senior",
+        "salary_range_usd": "200,000-250,000",
+        "reason": "Your product-centric background and multiple system design experiences make you a strong candidate for leading engineering teams."
+      },
+      {
+        "title": "Staff Engineer",
+        "seniority": "Senior",
+        "salary_range_usd": "190,000-240,000",
+        "reason": "Your extensive coding experience and active contribution in tech communities align with roles that require strategic problem-solving capabilities."
+      }
+    ],
+    "badges": [
+      "Problem Solver",
+      "System Design Expert",
+      "Active Contributor"
+    ]
+  }
+}

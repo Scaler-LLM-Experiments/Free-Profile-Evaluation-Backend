@@ -297,9 +297,10 @@ class ResponseValidator:
         # Basic/generic tools to avoid
         basic_tools = [
             "github", "gitlab", "bitbucket",
+            "leetcode", "hackerrank", "coursera", "udemy", "geeksforgeeks", "codechef",
             "turbo c", "dev c++", "code::blocks",
             "notepad++", "sublime text", "atom",
-            "visual studio code", "vscode"  # Everyone already uses VSCode
+            "visual studio code", "vscode", "intellij idea", "intellij"
         ]
 
         basic_tools_found = []
@@ -318,7 +319,7 @@ class ResponseValidator:
             )
             self.suggestions.append(
                 "Update prompt: Strengthen tool recommendation rules - "
-                "'NEVER recommend GitHub/GitLab/IDEs. Recommend specific advanced tools based on role: "
+                "'NEVER recommend GitHub/GitLab/LeetCode/HackerRank/Coursera/IDEs. Recommend specific advanced tools based on role: "
                 "For Backend → Postman, DataGrip, Redis Commander, Prometheus, k6. "
                 "For Full Stack → Storybook, React DevTools, Lighthouse, Sentry. "
                 "For DevOps → ArgoCD, Helm, Terraform, Datadog, PagerDuty.'"

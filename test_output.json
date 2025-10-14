@@ -1,0 +1,98 @@
+Redis cache disabled: Error 61 connecting to localhost:6379. Connection refused.
+{
+  "profile_evaluation": {
+    "profile_strength_score": 85,
+    "profile_strength_status": "Excellent",
+    "profile_strength_notes": "You have a robust profile with strong coding skills and active portfolio management, making you a competitive candidate for roles at leading tech companies.",
+    "skill_analysis": {
+      "strengths": [
+        "Active GitHub portfolio",
+        "Strong coding skills",
+        "Experience in an SDE role",
+        "Exposure to system design"
+      ],
+      "areas_to_develop": [
+        "Advanced system design skills",
+        "Mock interview practice",
+        "Depth in specific technologies"
+      ]
+    },
+    "recommended_tools": [
+      "LeetCode",
+      "System Design Primer",
+      "Cracking the Coding Interview"
+    ],
+    "experience_benchmark": {
+      "your_experience_years": "3-5",
+      "typical_for_target_role_years": "3-5",
+      "gap_analysis": "Your experience aligns well with your target role at tech giants like Google."
+    },
+    "interview_readiness": {
+      "technical_interview_percent": 80,
+      "hr_behavioral_percent": 70,
+      "technical_notes": "Additional focus on advanced system design and regular mock interviews can enhance your interview readiness."
+    },
+    "peer_comparison": {
+      "percentile": 90,
+      "label": "Top Performer",
+      "summary": "Your skill set is in the top percentile compared to peers targeting similar roles.",
+      "metrics": {
+        "profile_strength_percent": 85,
+        "better_than_peers_percent": 90
+      }
+    },
+    "success_likelihood": {
+      "score_percent": 88,
+      "label": "High likelihood of success",
+      "status": "Excellent",
+      "notes": "With targeted preparation, you have a high likelihood of success in securing a role at a top tech company."
+    },
+    "quick_wins": [
+      {
+        "title": "Master System Design",
+        "description": "Explore advanced system design concepts to improve your readiness for technical interviews.",
+        "icon": "lightbulb"
+      },
+      {
+        "title": "Regular Mock Interviews",
+        "description": "Increase the frequency of mock interviews to become more comfortable with different types of interview questions.",
+        "icon": "target"
+      },
+      {
+        "title": "Deepen Tech Expertise",
+        "description": "Focus on deepening your expertise in specific technologies that align with your target roles.",
+        "icon": "books"
+      }
+    ],
+    "opportunities_you_qualify_for": [
+      "SDE II at Google",
+      "Full Stack Engineer at Amazon",
+      "Backend Engineer at Facebook"
+    ],
+    "recommended_roles_based_on_interests": [
+      {
+        "title": "Software Engineer II",
+        "seniority": "Mid-Senior",
+        "salary_range_usd": "120,000-180,000",
+        "reason": "Your strong coding skills and product development experience make you a fit for mid-senior software engineering roles."
+      },
+      {
+        "title": "Full Stack Engineer",
+        "seniority": "Mid-Senior",
+        "salary_range_usd": "110,000-170,000",
+        "reason": "Your coding expertise and broad experience across product components suit a full stack engineering position."
+      },
+      {
+        "title": "Backend Engineer",
+        "seniority": "Mid-Senior",
+        "salary_range_usd": "115,000-175,000",
+        "reason": "Your problem solving skills and system design exposure are well-suited for backend-focused roles."
+      }
+    ],
+    "badges": [
+      "Coding Pro",
+      "Portfolio Star",
+      "Tech Innovator"
+    ]
+  }
+}
