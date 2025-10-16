@@ -50,8 +50,51 @@ class PeerComparisonLabel(Enum):
 class RecommendedRole(BaseModel):
     title: str
     seniority: ExperienceLevel
-    salary_range_usd: str
     reason: str
+    # Timeline fields for career transition
+    timeline_text: str = Field(
+        default="4-6 months",
+        description="Human-readable timeline (e.g., '4-6 months', '2-3 months')"
+    )
+    min_months: int = Field(
+        default=4,
+        ge=1,
+        le=24,
+        description="Minimum months to achieve this role"
+    )
+    max_months: int = Field(
+        default=6,
+        ge=1,
+        le=24,
+        description="Maximum months to achieve this role"
+    )
+    key_gap: str = Field(
+        default="Skill development needed",
+        description="Primary bottleneck or gap to address"
+    )
+    milestones: List[str] = Field(
+        default_factory=list,
+        description="Monthly milestones for achieving this role"
+    )
+    confidence: str = Field(
+        default="medium",
+        description="Confidence level: 'high', 'medium', or 'low'"
+    )
+
+
+class CurrentProfileKeyStat(BaseModel):
+    label: str = Field(..., description="Stat label (e.g., 'Experience', 'Current Role')")
+    value: str = Field(..., description="Stat value (e.g., '3-5 years', 'Software Engineer')")
+    icon: str = Field(default="circle", description="Phosphor icon name")
+
+
+class CurrentProfileSummary(BaseModel):
+    title: str = Field(default="Your Current Profile", description="Section title")
+    summary: str = Field(..., description="Conversational summary of current profile")
+    key_stats: List[CurrentProfileKeyStat] = Field(
+        default_factory=list,
+        description="Key statistics about current profile"
+    )
 
 
 class QuickWin(BaseModel):
@@ -110,6 +153,16 @@ class PeerComparisonMetrics(BaseModel):
 
 class PeerComparison(BaseModel):
     percentile: int
+    potential_percentile: int = Field(
+        default=75,
+        ge=0,
+        le=100,
+        description="Potential percentile if gaps are addressed (shown as lighter shade)"
+    )
+    peer_group_description: str = Field(
+        default="Similar professionals in tech",
+        description="Description of peer group being compared against (e.g., 'Senior Software Engineers at Big Tech firms')"
+    )
     label: PeerComparisonLabel = Field(..., description="Peer comparison label")
     summary: str
     metrics: PeerComparisonMetrics
@@ -130,6 +183,11 @@ class ProfileEvaluation(BaseModel):
         ..., description="Status of profile strength"
     )
     profile_strength_notes: str
+
+    # Current profile summary (for Career Transition section)
+    current_profile: CurrentProfileSummary = Field(
+        ..., description="Detailed summary of user's current profile based on quiz responses"
+    )
 
     skill_analysis: SkillAnalysis
     recommended_tools: List[str] = Field(
@@ -259,10 +317,15 @@ def enrich_full_profile_evaluation(
         profile["profile_strength_score"]
     )
 
+    # Apply motivational floor to peer comparison (minimum 35%)
+    # This prevents demotivation - same philosophy as profile_strength_score 45% floor
     peer = profile["peer_comparison"]
+    peer["percentile"] = max(35, peer["percentile"])
     peer["label"] = _peer_comparison_label_from_percentile(peer["percentile"])
 
+    # Apply motivational floor to success likelihood (minimum 35%)
     success = profile["success_likelihood"]
+    success["score_percent"] = max(35, success["score_percent"])
     success_status = _success_status_from_score(success["score_percent"])
     success["status"] = success_status
     success["label"] = _success_label_from_status(success_status)
@@ -333,31 +396,26 @@ profile_evaluation_data = {
         {
             "title": "iOS Developer",
             "seniority": "Entry",
-            "salary_range_usd": "$80k–$150k",
             "reason": "Interest in Mobile Development → iOS Developer because your interest in mobile technologies and Apple ecosystem aligns with this specialized role in iOS app development.",
         },
         {
             "title": "Android Developer",
             "seniority": "Entry",
-            "salary_range_usd": "$75k–$140k",
             "reason": "Interest in Mobile Development → Android Developer because your interest in mobile technologies and Android platform makes you perfect for this role in Android app development.",
         },
         {
             "title": "React Native Developer",
             "seniority": "Mid-Senior",
-            "salary_range_usd": "$85k–$155k",
             "reason": "Interest in Mobile Development → React Native Developer because your interest in mobile development combined with web technologies makes you ideal for cross-platform mobile development.",
         },
         {
             "title": "Flutter Developer",
             "seniority": "Mid-Senior",
-            "salary_range_usd": "$80k–$145k",
-            "reason": "Interest in Mobile Development → Flutter Developer because your interest in development and cross-platform solutions aligns with this role using Google’s Flutter framework.",
+            "reason": "Interest in Mobile Development → Flutter Developer because your interest in development and cross-platform solutions aligns with this role using Google's Flutter framework.",
         },
         {
             "title": "Health Tech Developer",
             "seniority": "Mid-Senior",
-            "salary_range_usd": "$80k–$150k",
             "reason": "Interest in Health Tech → Health Tech Developer because your interest in healthcare technology and programming skills make you well-suited for this role that develops health-related software.",
         },
     ],

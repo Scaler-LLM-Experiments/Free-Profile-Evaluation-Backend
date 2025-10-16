@@ -1,6 +1,8 @@
 import logging
 import os
-from typing import Dict
+import json
+from datetime import datetime
+from typing import Dict, Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -25,6 +27,11 @@ class QuizResponses(BaseModel):
     currentSkill: str
     requirementType: str
     targetCompany: str
+    # Optional label fields for display (sent from frontend)
+    currentRoleLabel: Optional[str] = None
+    targetRoleLabel: Optional[str] = None
+    targetCompanyLabel: Optional[str] = None
+    primaryGoal: Optional[str] = None  # Add primaryGoal field
 
     model_config = ConfigDict(extra="forbid")
 
@@ -76,10 +83,28 @@ app.add_middleware(
 async def evaluate_profile(request: EvaluationRequest) -> FullProfileEvaluationResponse:
     """Generate a full profile evaluation for the provided payload."""
 
+    # DEBUG: Log request to file
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    debug_dir = os.path.join(os.path.dirname(__file__), "debug_logs")
+    os.makedirs(debug_dir, exist_ok=True)
+
+    request_file = os.path.join(debug_dir, f"request_{timestamp}.json")
+    with open(request_file, 'w') as f:
+        json.dump(request.model_dump(), f, indent=2)
+    print(f"\n{'='*80}\nDEBUG: Request logged to {request_file}\n{'='*80}\n")
+
     try:
-        return run_poc(
+        result = run_poc(
             input_payload=request.model_dump(),
         )
+
+        # DEBUG: Log response to file (use mode='json' to serialize Enums properly)
+        response_file = os.path.join(debug_dir, f"response_{timestamp}.json")
+        with open(response_file, 'w') as f:
+            f.write(result.model_dump_json(indent=2))
+        print(f"\n{'='*80}\nDEBUG: Response logged to {response_file}\n{'='*80}\n")
+
+        return result
     except RuntimeError as exc:
         logger.exception("Evaluation failed due to configuration error")
         raise HTTPException(status_code=500, detail=str(exc)) from exc

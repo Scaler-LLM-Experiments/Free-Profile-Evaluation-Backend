@@ -9,8 +9,51 @@ from models import ExperienceLevel
 class RecommendedRoleRaw(BaseModel):
     title: str
     seniority: ExperienceLevel
-    salary_range_usd: str
     reason: str
+    # Timeline fields for career transition
+    timeline_text: str = Field(
+        default="4-6 months",
+        description="Human-readable timeline (e.g., '4-6 months', '2-3 months')"
+    )
+    min_months: int = Field(
+        default=4,
+        ge=1,
+        le=24,
+        description="Minimum months to achieve this role"
+    )
+    max_months: int = Field(
+        default=6,
+        ge=1,
+        le=24,
+        description="Maximum months to achieve this role"
+    )
+    key_gap: str = Field(
+        default="Skill development needed",
+        description="Primary bottleneck or gap to address"
+    )
+    milestones: List[str] = Field(
+        default_factory=list,
+        description="Monthly milestones for achieving this role"
+    )
+    confidence: str = Field(
+        default="medium",
+        description="Confidence level: 'high', 'medium', or 'low'"
+    )
+
+
+class CurrentProfileKeyStatRaw(BaseModel):
+    label: str = Field(..., description="Stat label (e.g., 'Experience', 'Current Role')")
+    value: str = Field(..., description="Stat value (e.g., '3-5 years', 'Software Engineer')")
+    icon: str = Field(default="circle", description="Phosphor icon name")
+
+
+class CurrentProfileSummaryRaw(BaseModel):
+    title: str = Field(default="Your Current Profile", description="Section title")
+    summary: str = Field(..., description="Conversational summary of current profile")
+    key_stats: List[CurrentProfileKeyStatRaw] = Field(
+        default_factory=list,
+        description="Key statistics about current profile"
+    )
 
 
 class SkillAnalysisRaw(BaseModel):
@@ -69,6 +112,16 @@ class PeerComparisonMetricsRaw(BaseModel):
 
 class PeerComparisonRaw(BaseModel):
     percentile: int
+    potential_percentile: int = Field(
+        default=75,
+        ge=0,
+        le=100,
+        description="Potential percentile if gaps are addressed (shown as lighter shade)"
+    )
+    peer_group_description: str = Field(
+        default="Similar professionals in tech",
+        description="Description of peer group being compared against (e.g., 'Senior Software Engineers at Big Tech firms')"
+    )
     summary: str
     metrics: PeerComparisonMetricsRaw
 
@@ -83,6 +136,11 @@ class ProfileEvaluationRaw(BaseModel):
         ..., ge=0, le=100, description="Overall profile score from 0 to 100"
     )
     profile_strength_notes: str
+
+    # Current profile summary (for Career Transition section)
+    current_profile: CurrentProfileSummaryRaw = Field(
+        ..., description="Detailed summary of user's current profile based on quiz responses"
+    )
 
     skill_analysis: SkillAnalysisRaw
     recommended_tools: List[str] = Field(

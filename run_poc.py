@@ -14,6 +14,15 @@ from redis.exceptions import RedisError
 from models import FullProfileEvaluationResponse, enrich_full_profile_evaluation
 from models_raw import FullProfileEvaluationResponseRaw
 from pydantic import ValidationError
+from quick_wins_logic import generate_quick_wins
+from job_descriptions import generate_job_opportunities
+from scoring_logic import calculate_profile_strength
+from tools_logic import generate_tool_recommendations
+from profile_notes_logic import generate_profile_strength_notes
+from timeline_logic import calculate_timeline_to_role, calculate_alternative_paths
+from current_profile_summary import generate_current_profile_summary
+from peer_comparison_logic import generate_peer_group_description, calculate_potential_percentile
+from label_mappings import get_role_label, get_company_label
 
 load_dotenv()
 
@@ -87,6 +96,8 @@ def call_openai_structured(
     api_key: Optional[str],
     openai_model: str,
     input_payload: Dict[str, Any],
+    calculated_profile_score: int,  # NEW: Pass calculated score for consistency
+    target_company_label: str,  # NEW: Pass company label for personalization
 ) -> FullProfileEvaluationResponse:
     client = OpenAI(api_key=api_key) if api_key else OpenAI()
 
@@ -95,6 +106,29 @@ def call_openai_structured(
         "produce a structured FullProfileEvaluationResponse focusing on prospects, role fit, gaps, and a roadmap.\n\n"
         "CONTEXT: The user is based in India and looking for opportunities in the Indian tech ecosystem (Bangalore, Hyderabad, Pune, NCR) "
         "or remote roles with Indian/global companies. Tailor all recommendations to be realistic and relevant for the Indian market.\n\n"
+        f"CRITICAL: SCORE CONSISTENCY RULES\n"
+        f"The user's profile_strength_score has been calculated as {calculated_profile_score}/100.\n"
+        f"ALL other percentage scores MUST be consistent with this baseline:\n\n"
+        f"1. peer_comparison.metrics.profile_strength_percent: MUST be {calculated_profile_score} (exact match)\n"
+        f"2. interview_readiness.technical_interview_percent: {max(0, calculated_profile_score - 10)} to {min(100, calculated_profile_score + 10)}\n"
+        f"   - Higher if problemSolving >= '51-100'\n"
+        f"   - Lower if problemSolving == '0-10'\n"
+        f"3. interview_readiness.hr_behavioral_percent: {max(0, calculated_profile_score - 10)} to {min(100, calculated_profile_score + 5)}\n"
+        f"   - Lower if mockInterviews == 'never'\n"
+        f"4. peer_comparison.percentile: {max(0, calculated_profile_score - 5)} to {min(100, calculated_profile_score + 5)}\n"
+        f"5. success_likelihood.score_percent: {max(0, calculated_profile_score - 10)} to {min(100, calculated_profile_score + 5)}\n"
+        f"   - CANNOT significantly exceed profile_strength_score\n\n"
+        f"LOGIC CHECK: If profile is {calculated_profile_score}% strong, success likelihood cannot be much higher!\n\n"
+        f"CRITICAL: USE ACTUAL TARGET COMPANY IN ALL TEXT\n"
+        f"The user selected target company: '{target_company_label}'\n\n"
+        f"When generating ANY text field (areas_to_develop, technical_notes, success_likelihood.notes, peer_comparison.summary):\n"
+        f"- Use the ACTUAL company label: '{target_company_label}'\n"
+        f"- DO NOT default to 'FAANG' or 'Big Tech' unless that's what they selected\n\n"
+        f"Examples:\n"
+        f"- If target is 'High Growth Startups' → 'startup interview preparation' NOT 'FAANG interview preparation'\n"
+        f"- If target is 'Product Unicorns' → 'product company interview preparation'\n"
+        f"- If target is 'Service Companies' → 'service company interview preparation'\n"
+        f"- If target is 'FAANG / Big Tech' → 'FAANG / Big Tech interview preparation' (only if selected!)\n\n"
         "Field guide for the input JSON:\n"
         "- background: 'tech' = already works/studies in software; 'non-tech' = transitioning from another domain\n"
         "- quizResponses.currentRole:\n"
@@ -155,7 +189,14 @@ def call_openai_structured(
         "   - portfolio='active-5+' → Strong indicator for IC engineering roles\n\n"
         "3. RESPECT TARGET ROLE:\n"
         "   - If targetRole='faang-sde'/'backend'/'fullstack' → Top 3 recommendations MUST be engineering roles\n"
-        "   - If targetRole='tech-lead' → Include Lead/Architect roles\n\n"
+        "   - If targetRole='tech-lead' → Include Lead/Architect roles\n"
+        "   - 🔍 CRITICAL: If targetRole='exploring'/'not-sure' OR targetRoleLabel contains 'Exploring':\n"
+        "     * User is still deciding their path - PROVIDE SPECIFIC SUGGESTIONS!\n"
+        "     * Based on their background, experience, skills, and topicOfInterest, suggest 3-5 CONCRETE roles\n"
+        "     * DO NOT just echo 'Not sure yet / Exploring' - that's not helpful!\n"
+        "     * Example: Non-tech + interested in AI/ML → suggest 'Data Analyst', 'Junior ML Engineer', 'Backend Engineer'\n"
+        "     * Example: Tech 0-2 years + web-development interest → suggest 'Junior Frontend Engineer', 'Full-Stack Engineer', 'Backend Engineer'\n"
+        "     * Use topicOfInterest as PRIMARY signal when targetRole is exploring\n\n"
         "4. TECHNICAL ROLES ONLY - CRITICAL RESTRICTION:\n"
         "   ❌ NEVER RECOMMEND NON-TECHNICAL ROLES:\n"
         "   - Product Manager / Product Owner\n"
@@ -184,12 +225,15 @@ def call_openai_structured(
         "   - For topicOfInterest='edtech' → Mention BYJU'S, Unacademy, Vedantu, upGrad\n"
         "   - For topicOfInterest='healthtech' → Mention PharmEasy, Practo, 1mg\n\n"
         "CRITICAL RULES FOR recommended_tools:\n"
-        "❌ NEVER recommend basic/generic platforms:\n"
-        "   - GitHub, GitLab, Bitbucket (everyone already uses these)\n"
-        "   - LeetCode, HackerRank, Coursera, Udemy, GeeksForGeeks, CodeChef (generic learning platforms)\n"
-        "   - Turbo C, Dev C++, Code::Blocks, VS Code, IntelliJ IDEA (basic IDEs everyone uses)\n"
-        "   - Generic platforms without specific professional value\n\n"
-        "✅ ALWAYS recommend SPECIFIC, VALUABLE tools from these curated lists:\n\n"
+        "🚨 ABSOLUTE BAN - NEVER RECOMMEND THESE (Response will be REJECTED if found):\n"
+        "   ❌ LeetCode\n"
+        "   ❌ HackerRank\n"
+        "   ❌ GitHub / GitLab / Bitbucket\n"
+        "   ❌ Coursera / Udemy / GeeksForGeeks / CodeChef\n"
+        "   ❌ VS Code / IntelliJ IDEA / Turbo C / Dev C++\n"
+        "   ❌ Any basic IDE or generic learning platform\n\n"
+        "These are TOO BASIC and everyone already knows them. Recommending them shows lack of expertise.\n\n"
+        "✅ ONLY recommend SPECIFIC, PROFESSIONAL tools from these curated lists:\n\n"
         "   NON-TECH BACKGROUND TOOL RECOMMENDATIONS:\n"
         "   → Non-Tech → Backend Engineer:\n"
         "      Core: Python, Flask, SQL, Git, Postman\n"
@@ -326,19 +370,23 @@ def call_openai_structured(
         "- List 5-7 realistic job opportunities with SPECIFIC company names from Indian market\n"
         "- Match experience level: Junior roles for 0-2 years, Mid/Senior for 3-5, Senior/Staff for 5+\n"
         "- Include mix of: Product companies, Unicorns, Well-funded startups, Service-based (if experience < 2 years)\n"
-        "- Format: '[ROLE] at [SPECIFIC COMPANY] - [KEY REQUIREMENT]'\n"
+        "- KEEP DESCRIPTIONS CRISP: Maximum 8-10 words per opportunity\n"
+        "- Format: '[ROLE] at [SPECIFIC COMPANY] - [BRIEF REQUIREMENT]'\n"
         "  Examples:\n"
-        "  - 'Senior Backend Engineer at Razorpay - Strong in distributed systems and payment processing'\n"
-        "  - 'Staff Engineer at CRED - 5+ years with microservices architecture experience'\n"
-        "  - 'SDE-2 at Flipkart - 3-5 years with e-commerce domain knowledge'\n"
-        "  - 'Tech Lead at PhonePe - Proven track record in scaling fintech applications'\n\n"
+        "  - 'Senior Backend Engineer at Razorpay - Payment systems expertise'\n"
+        "  - 'Staff Engineer at CRED - Microservices architecture experience'\n"
+        "  - 'SDE-2 at Flipkart - E-commerce domain knowledge'\n"
+        "  - 'Tech Lead at PhonePe - Proven scaling experience'\n\n"
         "VALIDATION CHECKLIST (Internal - Review Before Finalizing):\n"
         "☑ Does EVERY recommended role match experience level?\n"
         "☑ Does systemDesign='multiple' lead to senior/staff roles?\n"
         "☑ Are ALL roles HANDS-ON TECHNICAL/ENGINEERING roles (no PM/UX/BA/QA Manual)?\n"
-        "☑ Are recommended_tools SPECIFIC and NOT basic platforms (no GitHub/GitLab/Turbo C)?\n"
-        "☑ Are quick_wins DETAILED with action → outcome → timeline?\n"
+        "☑ 🚨 CRITICAL: Check recommended_tools does NOT contain: LeetCode, HackerRank, GitHub, Coursera, VS Code\n"
+        "☑ Are recommended_tools SPECIFIC professional tools (Postman, Docker, Terraform, etc)?\n"
+        "☑ Are quick_wins using the EXACT wording from the decision tree above?\n"
+        "☑ Are quick_wins DETAILED with specific actions (not generic 'practice more')?\n"
         "☑ Are opportunities REALISTIC with REAL Indian company names?\n"
+        "☑ Are opportunity descriptions CRISP (max 8-10 words)?\n"
         "☑ Does targetRole align with top 3 recommendations?\n"
         "☑ Zero non-technical roles in the entire response?\n\n"
         "In your advice, acknowledge when values show limited exposure (e.g., not-yet, none, never) and tailor guidance for the user's background pivot."
@@ -486,26 +534,159 @@ def run_poc(
     cache_key = None
     cached_json = None
 
-    if cache_client is not None:
-        cache_key = _make_cache_key(payload, model_name)
-        try:
-            cached_json = cache_client.get(cache_key)
-        except RedisError as exc:  # pragma: no cover - network dependent
-            logger.warning("Redis cache read failed: %s", exc)
-            cached_json = None
+    # TEMPORARY: Cache disabled for testing new prompt
+    # if cache_client is not None:
+    #     cache_key = _make_cache_key(payload, model_name)
+    #     try:
+    #         cached_json = cache_client.get(cache_key)
+    #     except RedisError as exc:  # pragma: no cover - network dependent
+    #         logger.warning("Redis cache read failed: %s", exc)
+    #         cached_json = None
 
-    if cached_json:
-        return FullProfileEvaluationResponse.model_validate_json(cached_json)
+    # if cached_json:
+    #     return FullProfileEvaluationResponse.model_validate_json(cached_json)
 
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
         raise RuntimeError("OPENAI_API_KEY is not set. Provide it via the environment variable.")
 
+    # Calculate profile score BEFORE GPT for consistency
+    background = payload.get("background", "")
+    quiz_responses = payload.get("quizResponses", {})
+
+    scoring_result = calculate_profile_strength(background, quiz_responses)
+    calculated_score = scoring_result["score"]
+
+    # Get target company label for personalization
+    from label_mappings import get_company_label
+    target_company = quiz_responses.get("targetCompany", "")
+    target_company_label = quiz_responses.get("targetCompanyLabel") or get_company_label(target_company)
+
     result = call_openai_structured(
         api_key=api_key,
         openai_model=model_name,
         input_payload=payload,
+        calculated_profile_score=calculated_score,
+        target_company_label=target_company_label,
     )
+
+    # OVERRIDE GPT outputs with hardcoded logic for consistency and quality
+    # Note: We already calculated scoring_result above, reuse it here
+
+    # Override Quick Wins
+    hardcoded_quick_wins = generate_quick_wins(background, quiz_responses)
+
+    # Override Job Opportunities (remove generic fluff!)
+    hardcoded_opportunities = generate_job_opportunities(background, quiz_responses)
+
+    # Override Recommended Tools (remove generic tools!)
+    hardcoded_tools = generate_tool_recommendations(background, quiz_responses)
+
+    # Replace in the response
+    result_dict = result.model_dump()
+
+    # Apply calculated score
+    result_dict["profile_evaluation"]["profile_strength_score"] = scoring_result["score"]
+
+    # Override profile_strength_notes with personalized, conversational notes
+    personalized_notes = generate_profile_strength_notes(background, quiz_responses, scoring_result["score"])
+
+    # Add contradiction note to the beginning if detected
+    if scoring_result["has_contradictions"]:
+        personalized_notes = f"{scoring_result['contradiction_note']} {personalized_notes}"
+
+    result_dict["profile_evaluation"]["profile_strength_notes"] = personalized_notes
+
+    result_dict["profile_evaluation"]["quick_wins"] = hardcoded_quick_wins
+    result_dict["profile_evaluation"]["opportunities_you_qualify_for"] = hardcoded_opportunities
+    result_dict["profile_evaluation"]["recommended_tools"] = hardcoded_tools
+
+    # Override current_profile with detailed summary from quiz responses
+    current_profile_summary = generate_current_profile_summary(background, quiz_responses)
+    result_dict["profile_evaluation"]["current_profile"] = current_profile_summary
+
+    # Override peer comparison with calculated peer group description and potential percentile
+    peer_comparison = result_dict["profile_evaluation"]["peer_comparison"]
+    current_percentile = peer_comparison.get("percentile", 50)
+
+    peer_group_desc = generate_peer_group_description(background, quiz_responses)
+    potential_percentile = calculate_potential_percentile(
+        current_percentile, background, quiz_responses, scoring_result["score"]
+    )
+
+    peer_comparison["peer_group_description"] = peer_group_desc
+    peer_comparison["potential_percentile"] = potential_percentile
+
+    # Override timelines for recommended roles
+    target_role = quiz_responses.get("targetRole", "")
+    target_company = quiz_responses.get("targetCompany", "")
+    recommended_roles = result_dict["profile_evaluation"]["recommended_roles_based_on_interests"]
+
+    # Find user's target role in recommendations or calculate separately
+    target_role_timeline = None
+    target_role_index = None
+
+    # SIMPLIFIED: Just use the target role label directly (frontend now sends labels!)
+    # Try to find it in GPT recommendations (case-insensitive partial match)
+    if target_role:
+        target_lower = target_role.lower()
+        for idx, role in enumerate(recommended_roles):
+            role_title = role.get("title", "").lower()
+            # Simple contains check in both directions
+            if target_lower in role_title or role_title in target_lower:
+                target_role_index = idx
+                break
+
+    # Calculate timeline for user's stated target role
+    if target_role:
+        target_role_timeline_data = calculate_timeline_to_role(target_role, quiz_responses)
+        # SIMPLIFIED: Use targetRoleLabel directly from frontend (what user clicked)
+        display_title = quiz_responses.get("targetRoleLabel", target_role)
+        target_role_timeline = {
+            "title": display_title,  # Use the label directly from frontend!
+            "seniority": recommended_roles[0]["seniority"] if recommended_roles else "Mid-Senior",
+            "reason": f"Your stated target role - {target_role_timeline_data['key_gap']}",
+            "timeline_text": target_role_timeline_data["timeline_text"],
+            "min_months": target_role_timeline_data["min_months"],
+            "max_months": target_role_timeline_data["max_months"],
+            "key_gap": target_role_timeline_data["key_gap"],
+            "milestones": target_role_timeline_data["milestones"],
+            "confidence": target_role_timeline_data["confidence"]
+        }
+
+    # DEDUPLICATE: Remove duplicate role titles (keep first occurrence)
+    seen_titles = set()
+    deduplicated_roles = []
+    for role in recommended_roles:
+        role_title = role.get("title", "").strip().lower()
+        if role_title and role_title not in seen_titles:
+            seen_titles.add(role_title)
+            deduplicated_roles.append(role)
+
+    recommended_roles = deduplicated_roles
+
+    # Calculate timelines for all recommended roles
+    for role in recommended_roles:
+        role_timeline = calculate_timeline_to_role(role["title"], quiz_responses)
+        role["timeline_text"] = role_timeline["timeline_text"]
+        role["min_months"] = role_timeline["min_months"]
+        role["max_months"] = role_timeline["max_months"]
+        role["key_gap"] = role_timeline["key_gap"]
+        role["milestones"] = role_timeline["milestones"]
+        role["confidence"] = role_timeline["confidence"]
+
+    # If target role found, move it to first position
+    if target_role_index is not None and target_role_index > 0:
+        target_role_obj = recommended_roles.pop(target_role_index)
+        recommended_roles.insert(0, target_role_obj)
+    elif target_role_timeline is not None and target_role not in [r["title"] for r in recommended_roles]:
+        # Target role not in recommendations, insert it at the top
+        recommended_roles.insert(0, target_role_timeline)
+
+    # Limit to top 5 roles (target + 4 alternatives)
+    result_dict["profile_evaluation"]["recommended_roles_based_on_interests"] = recommended_roles[:5]
+
+    result = FullProfileEvaluationResponse.model_validate(result_dict)
 
     result_json = result.model_dump_json()
     if cache_client is not None and cache_key is not None:
