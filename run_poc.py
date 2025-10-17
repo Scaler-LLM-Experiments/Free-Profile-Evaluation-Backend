@@ -389,6 +389,10 @@ def call_openai_structured(
         "☑ Are opportunity descriptions CRISP (max 8-10 words)?\n"
         "☑ Does targetRole align with top 3 recommendations?\n"
         "☑ Zero non-technical roles in the entire response?\n\n"
+        "CRITICAL: FORMAT FOR experience_benchmark:\n"
+        "- your_experience_years: Use ONLY numbers like '0-2', '3-5', '5-8', '8+' (NO 'years' or 'year' suffix)\n"
+        "- typical_for_target_role_years: Use ONLY numbers like '0-2', '3-5', '5-8', '8+' (NO 'years' or 'year' suffix)\n"
+        "- Frontend will automatically append 'years' when displaying - do NOT include it in your response\n\n"
         "In your advice, acknowledge when values show limited exposure (e.g., not-yet, none, never) and tailor guidance for the user's background pivot."
     )
 
@@ -679,12 +683,25 @@ def run_poc(
     if target_role_index is not None and target_role_index > 0:
         target_role_obj = recommended_roles.pop(target_role_index)
         recommended_roles.insert(0, target_role_obj)
-    elif target_role_timeline is not None and target_role not in [r["title"] for r in recommended_roles]:
-        # Target role not in recommendations, insert it at the top
-        recommended_roles.insert(0, target_role_timeline)
+    elif target_role_timeline is not None:
+        # Check if target role title already exists in recommendations (case-insensitive)
+        target_role_display = target_role_timeline.get("title", "").strip().lower()
+        existing_titles = [r["title"].strip().lower() for r in recommended_roles]
+        if target_role_display not in existing_titles:
+            # Target role not in recommendations, insert it at the top
+            recommended_roles.insert(0, target_role_timeline)
+
+    # FINAL DEDUPLICATION: Remove any remaining duplicates (extra safety check)
+    seen_titles_final = set()
+    final_deduplicated_roles = []
+    for role in recommended_roles:
+        role_title = role.get("title", "").strip().lower()
+        if role_title and role_title not in seen_titles_final:
+            seen_titles_final.add(role_title)
+            final_deduplicated_roles.append(role)
 
     # Limit to top 5 roles (target + 4 alternatives)
-    result_dict["profile_evaluation"]["recommended_roles_based_on_interests"] = recommended_roles[:5]
+    result_dict["profile_evaluation"]["recommended_roles_based_on_interests"] = final_deduplicated_roles[:5]
 
     result = FullProfileEvaluationResponse.model_validate(result_dict)
 
