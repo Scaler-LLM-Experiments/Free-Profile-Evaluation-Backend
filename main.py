@@ -118,6 +118,7 @@ async def evaluate_profile(request: EvaluationRequest) -> FullProfileEvaluationR
 
 
 @app.get("/health")
+@app.head("/health")
 async def healthcheck() -> Dict[str, str]:
     """Lightweight health endpoint for readiness probes."""
 
