@@ -65,8 +65,9 @@ def _determine_allowed_origins() -> list[str]:
             return origins
 
     return [
-        "https://frontend-production-d53f.up.railway.app",
+        "https://free-profile-evaluation.onrender.com",
         "http://127.0.0.1:3000",
+        "http://localhost:3000",
     ]
 
 
